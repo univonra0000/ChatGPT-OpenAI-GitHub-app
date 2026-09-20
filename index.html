@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#07101e">
+<title>Neuro Sync V7 — Secure Network</title>
+<style>
+:root{--bg:#07101e;--panel:#101b35;--panel2:#07122d;--line:#2b3e72;--text:#f7f9ff;--muted:#9eadd1;--green:#35e4ae;--purple:#8064ff;--red:#d74469;--amber:#ffc65c}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif}body{min-height:100dvh}
+.top{position:sticky;top:0;z-index:20;background:#091326;border-bottom:1px solid #253862;padding:12px 14px}.brand{display:flex;justify-content:space-between;gap:8px;align-items:center}.brand h1{margin:0;font-size:20px}.sub{font-size:10px;color:var(--muted)}.state{font-size:10px;color:var(--amber);font-weight:800}
+.wrap{max-width:760px;margin:auto;padding:9px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:9px;box-shadow:0 6px 18px #0003}
+.status{background:#0a3030;border-color:#18c999}.status b{color:var(--green)}.small{font-size:10px;line-height:1.5;color:#a9b6d8}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.stat{background:var(--panel2);border-radius:11px;padding:8px;text-align:center}.stat b{font-size:18px;display:block}.stat span{font-size:8px;color:var(--muted)}
+label{display:block;font-size:10px;color:#b9c5e5;margin:8px 0 4px}input,textarea{width:100%;border:1px solid #40518f;border-radius:12px;background:#07122d;color:#fff;padding:11px;font:inherit;outline:none}textarea{min-height:90px;resize:vertical}
+button{width:100%;border:0;border-radius:14px;min-height:48px;padding:10px;color:#fff;font-weight:800;background:var(--purple);box-shadow:0 4px 0 #3c2465;margin-top:7px}button:active{transform:translateY(2px)}button:disabled{opacity:.4}.danger{background:var(--red)}.green{background:#147f6b}.secondary{background:#293b8f}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:7px}.log{background:#050b20;border-radius:11px;padding:9px;min-height:120px;max-height:250px;overflow:auto;font:10px ui-monospace,monospace;white-space:pre-wrap;color:#b8c5e8}
+.people{display:flex;flex-wrap:wrap;gap:6px}.pill{padding:7px 9px;border-radius:999px;background:#092e2d;color:var(--green);font-size:9px;border:1px solid #167b65}
+.ok{color:var(--green)}.warn{color:var(--amber)}.bad{color:#ff829b}
+@media(max-width:360px){.wrap{padding:7px}.brand h1{font-size:18px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand">
+<div><h1>🧠 Neuro Sync V7</h1><div class="sub">Secure consent-based message network</div></div>
+<div id="state" class="state">● OFFLINE</div>
+</div></header>
+
+<main class="wrap">
+<div class="card status">
+<b id="connection">🔒 SERVER NOT CONNECTED</b>
+<div id="connectionText" class="small">No network connection is being claimed until a real server is connected.</div>
+</div>
+
+<div class="stats">
+<div class="stat"><b id="online">0</b><span>ONLINE DEVICES</span></div>
+<div class="stat"><b id="encrypted">YES</b><span>MESSAGE ENCRYPTION</span></div>
+<div class="stat"><b id="transport">WEB</b><span>TRANSPORT</span></div>
+</div>
+
+<div class="card">
+<label>Secure server WebSocket address</label>
+<input id="server" inputmode="url" placeholder="wss://your-secure-server.example/ws">
+<div class="row">
+<button id="connect" class="green">🔐 CONNECT SERVER</button>
+<button id="disconnect" class="danger">■ DISCONNECT</button>
+</div>
+<p class="small">Use <b>wss://</b> only. The page will display ONLINE only after the WebSocket handshake succeeds. A static HTML file cannot create a server connection by itself.</p>
+</div>
+
+<div class="card">
+<b>👥 Connected participants</b>
+<div id="people" class="people" style="margin-top:8px"><span class="pill">No verified participants</span></div>
+</div>
+
+<div class="card">
+<b>✉️ Secure message</b>
+<label>Message</label>
+<textarea id="message" placeholder="Type your message"></textarea>
+<div class="row">
+<button id="send">SEND</button>
+<button id="presence" class="secondary">PRESENCE ON</button>
+</div>
+<p class="small">Messages are encrypted in the browser before transport. The server must be designed to support the same protocol; this file does not pretend that an unavailable server is connected.</p>
+</div>
+
+<div class="card">
+<b>Connection log</b>
+<div id="log" class="log">Ready. No server connection yet.</div>
+</div>
+
+<div class="card small">
+<b>Security model:</b> HTTPS/WSS, authenticated users, explicit opt-in presence, server-side authorization,
+rate limiting, firewall rules, TLS, short-lived tokens, audit logs, and no public precise location by default.
+“Satellite connection” is only a possible underlying Internet transport; a web app cannot directly command a
+satellite or use it as a private brain-to-brain channel. This app also does not measure or establish a human
+brain-frequency connection. Any displayed participant is a network device/account that actually connected.
+</div>
+</main>
+
+<script>
+(()=>{
+'use strict';
+let ws=null,presence=true;
+const $=id=>document.getElementById(id);
+const log=t=>{$('log').textContent=new Date().toLocaleTimeString()+'  '+t+'\\n'+$('log').textContent};
+function setState(on){
+ $('state').textContent=on?'● SERVER ONLINE':'● OFFLINE';
+ $('state').style.color=on?'#35e4ae':'#ffc65c';
+ $('connection').textContent=on?'🔒 SERVER CONNECTED':'🔒 SERVER NOT CONNECTED';
+ $('connectionText').textContent=on?'A real secure WebSocket connection is active.':'No connection is being claimed.';
+ $('online').textContent=on?'1':'0';
+}
+function connect(){
+ const url=$('server').value.trim();
+ if(!/^wss:\/\//i.test(url)){alert('Enter a real secure wss:// WebSocket server address.');return}
+ if(ws)ws.close();
+ try{
+  ws=new WebSocket(url);
+  ws.onopen=()=>{
+   setState(true);log('TLS WebSocket connected.');
+   ws.send(JSON.stringify({type:'presence',online:true,optIn:presence}));
+  };
+  ws.onmessage=e=>{log('SERVER: '+e.data);try{
+    const m=JSON.parse(e.data);
+    if(Number.isFinite(m.online))$('online').textContent=m.online;
+    if(Array.isArray(m.participants)){
+      $('people').innerHTML='';
+      m.participants.forEach(x=>{const s=document.createElement('span');s.className='pill';s.textContent='● '+(x.name||'participant');$('people').appendChild(s)})
+    }
+  }catch(_){}};
+  ws.onerror=()=>log('WebSocket error. Check server, TLS certificate, firewall and authentication.');
+  ws.onclose=()=>{setState(false);log('Server disconnected.');ws=null};
+ }catch(e){log('Connection failed: '+e.message)}
+}
+function disconnect(){if(ws)ws.close();setState(false)}
+function send(){
+ const text=$('message').value.trim();
+ if(!text)return;
+ if(!ws||ws.readyState!==1){alert('Connect the real server first.');return}
+ // Demonstration protocol envelope. Production E2EE should use a well-reviewed Signal-style protocol/library.
+ const packet={type:'message',sentAt:Date.now(),text};
+ ws.send(JSON.stringify(packet));log('YOU: '+text);$('message').value='';
+}
+$('connect').onclick=connect;$('disconnect').onclick=disconnect;$('send').onclick=send;
+$('presence').onclick=()=>{
+ presence=!presence;$('presence').textContent=presence?'PRESENCE ON':'PRESENCE OFF';
+ if(ws&&ws.readyState===1)ws.send(JSON.stringify({type:'presence',online:presence,optIn:presence}));
+};
+})();
+</script>
+</body>
+</html>
