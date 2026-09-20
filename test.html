@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COLBAS WSS Test</title>
+<style>
+body{font-family:system-ui;margin:20px;max-width:600px}
+button,input{font-size:16px;padding:12px;margin:5px 0;width:100%;box-sizing:border-box}
+#log{white-space:pre-wrap;background:#eee;padding:12px;min-height:150px}
+</style>
+</head>
+<body>
+<h2>COLBAS WSS Test</h2>
+<input id="url" value="wss://colbas.univonra.workers.dev/ws">
+<button onclick="connect()">Connect</button>
+<button onclick="sendPing()">Ping</button>
+<div id="status">OFFLINE</div>
+<div id="log"></div>
+<script>
+let ws;
+const log = x => document.querySelector("#log").textContent += x + "\\n";
+function connect(){
+  const url=document.querySelector("#url").value.trim();
+  ws=new WebSocket(url);
+  ws.onopen=()=>{
+    document.querySelector("#status").textContent="CONNECTED";
+    log("Connected");
+    ws.send(JSON.stringify({type:"presence",online:true}));
+  };
+  ws.onmessage=e=>log("← "+e.data);
+  ws.onerror=()=>log("WebSocket error");
+  ws.onclose=()=>document.querySelector("#status").textContent="OFFLINE";
+}
+function sendPing(){
+  if(ws && ws.readyState===1)
+    ws.send(JSON.stringify({type:"ping"}));
+}
+</script>
+</body>
+</html>
